@@ -1,0 +1,51 @@
+[project]
+name = "edgeunicompile"
+version = "0.1.0"
+description = "Edge Universal Compile - AI compiler for edge devices"
+requires-python = ">=3.13"
+authors = [
+  { name = "Your Name", email = "you@example.com" }
+]
+dependencies = [
+  "numpy>=2.0",
+  "onnx>=1.16",
+  "flatbuffers>=24.0",
+  "click>=8.1",
+  "rich>=13.7",
+  "pytest>=8.0",
+  "pyyaml>=6.0"
+]
+keywords = ["edge-ai", "compiler", "onnx", "mlir"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.13",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Compilers"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/your-username/EdgeUniCompile"
+"Repository" = "https://github.com/your-username/EdgeUniCompile"
+
+[project.scripts]
+edgeunic = "edgeunicompile.cli.main:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["python"]
+include = ["edgeunicompile"]
+
+[tool.setuptools.package-dir]
+edgeunicompile = "python/edgeunicompile"

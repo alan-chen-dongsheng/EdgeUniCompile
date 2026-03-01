@@ -1,0 +1,24 @@
+Metadata-Version: 2.4
+Name: edgeunicompile
+Version: 0.1.0
+Summary: Edge Universal Compile - AI compiler for edge devices
+Author-email: Your Name <you@example.com>
+Project-URL: Homepage, https://github.com/your-username/EdgeUniCompile
+Project-URL: Repository, https://github.com/your-username/EdgeUniCompile
+Keywords: edge-ai,compiler,onnx,mlir
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.13
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Software Development :: Compilers
+Requires-Python: >=3.13
+License-File: LICENSE
+Requires-Dist: numpy>=2.0
+Requires-Dist: onnx>=1.16
+Requires-Dist: flatbuffers>=24.0
+Requires-Dist: click>=8.1
+Requires-Dist: rich>=13.7
+Requires-Dist: pytest>=8.0
+Requires-Dist: pyyaml>=6.0
+Dynamic: license-file

@@ -1,0 +1,10 @@
+LICENSE
+README.md
+pyproject.toml
+python/edgeunicompile/__init__.py
+python/edgeunicompile.egg-info/PKG-INFO
+python/edgeunicompile.egg-info/SOURCES.txt
+python/edgeunicompile.egg-info/dependency_links.txt
+python/edgeunicompile.egg-info/entry_points.txt
+python/edgeunicompile.egg-info/requires.txt
+python/edgeunicompile.egg-info/top_level.txt
