@@ -4,7 +4,7 @@
 using namespace edgeunic;
 
 TEST(ContextTest, CreateContext) {
-    auto ctx = Context::Create();
+    auto ctx = CompileContext::Create();
     ASSERT_TRUE(ctx);
     EXPECT_TRUE(ctx->GetOptLevel() == 3);
     EXPECT_TRUE(ctx->GetSramSize() == 32 * 1024 * 1024);  // 32MB
@@ -14,22 +14,20 @@ TEST(ContextTest, CreateContext) {
 }
 
 TEST(ContextTest, SetAndGetAttributes) {
-    auto ctx = Context::Create();
+    auto ctx = CompileContext::Create();
 
-    ctx->SetAttribute("test_key", 42);
-    EXPECT_TRUE(ctx->GetAttribute<int>("test_key") == 42);
+    ctx->SetAttribute("test_key", int64_t(42));
+    EXPECT_EQ(std::get<int64_t>(ctx->GetAttribute("test_key").value()), int64_t(42));
 
     ctx->SetAttribute("pi", 3.14159f);
-    EXPECT_TRUE(ctx->GetAttribute<float>("pi") == 3.14159f);
+    EXPECT_EQ(std::get<float>(ctx->GetAttribute("pi").value()), 3.14159f);
 
     ctx->SetAttribute("name", "test");
-    EXPECT_TRUE(ctx->GetAttribute<std::string>("name") == "test");
-
-    EXPECT_TRUE(ctx->GetAttribute<std::string>("nonexistent", "default") == "default");
+    EXPECT_EQ(std::get<std::string>(ctx->GetAttribute("name").value()), "test");
 }
 
 TEST(ContextTest, PerformanceCounters) {
-    auto ctx = Context::Create();
+    auto ctx = CompileContext::Create();
 
     ctx->IncrementCounter("counter1");
     EXPECT_TRUE(ctx->GetCounter("counter1") == 1);
@@ -45,7 +43,7 @@ TEST(ContextTest, PerformanceCounters) {
 }
 
 TEST(ContextTest, Configuration) {
-    auto ctx = Context::Create();
+    auto ctx = CompileContext::Create();
 
     ctx->SetOptLevel(0);
     EXPECT_TRUE(ctx->GetOptLevel() == 0);

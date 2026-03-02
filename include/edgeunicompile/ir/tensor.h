@@ -27,7 +27,7 @@ public:
     const std::vector<uint8_t>& GetData() const { return data_; }
     std::vector<uint8_t>& GetData() { return data_; }
 
-    void SetData(const std::vector<uint8_t>& data) { data_ = data; }
+    void SetData(const std::vector<uint8_t>& data) { data_ = data; is_constant_ = !data_.empty(); }
 
     bool IsConstant() const { return is_constant_; }
     void SetIsConstant(bool is_constant) { is_constant_ = is_constant; }

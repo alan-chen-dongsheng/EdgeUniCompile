@@ -4,9 +4,9 @@
 using namespace edgeunic;
 
 TEST(TensorTest, CreateTensor) {
-    Tensor tensor("test_tensor", DataType::FLOAT32, Shape{{2, 3}});
+    Tensor tensor("test_tensor", DataType::kFloat32, Shape{{2, 3}});
     EXPECT_EQ(tensor.GetName(), "test_tensor");
-    EXPECT_EQ(tensor.GetDataType(), DataType::FLOAT32);
+    EXPECT_EQ(tensor.GetDataType(), DataType::kFloat32);
     EXPECT_EQ(tensor.GetShape().dims, std::vector<int64_t>({2, 3}));
     EXPECT_TRUE(tensor.GetData().empty());
     EXPECT_FALSE(tensor.IsConstant());
@@ -14,7 +14,7 @@ TEST(TensorTest, CreateTensor) {
 }
 
 TEST(TensorTest, SetAndGetName) {
-    Tensor tensor("test_tensor", DataType::FLOAT32, Shape{{2, 3}});
+    Tensor tensor("test_tensor", DataType::kFloat32, Shape{{2, 3}});
     EXPECT_EQ(tensor.GetName(), "test_tensor");
 
     tensor.SetName("new_name");
@@ -22,15 +22,15 @@ TEST(TensorTest, SetAndGetName) {
 }
 
 TEST(TensorTest, SetAndGetDataType) {
-    Tensor tensor("test_tensor", DataType::FLOAT32, Shape{{2, 3}});
-    EXPECT_EQ(tensor.GetDataType(), DataType::FLOAT32);
+    Tensor tensor("test_tensor", DataType::kFloat32, Shape{{2, 3}});
+    EXPECT_EQ(tensor.GetDataType(), DataType::kFloat32);
 
-    tensor.SetDataType(DataType::INT32);
-    EXPECT_EQ(tensor.GetDataType(), DataType::INT32);
+    tensor.SetDataType(DataType::kInt32);
+    EXPECT_EQ(tensor.GetDataType(), DataType::kInt32);
 }
 
 TEST(TensorTest, SetAndGetShape) {
-    Tensor tensor("test_tensor", DataType::FLOAT32, Shape{{2, 3}});
+    Tensor tensor("test_tensor", DataType::kFloat32, Shape{{2, 3}});
     EXPECT_EQ(tensor.GetShape().dims, std::vector<int64_t>({2, 3}));
 
     tensor.SetShape(Shape{{3, 4, 5}});
@@ -38,15 +38,15 @@ TEST(TensorTest, SetAndGetShape) {
 }
 
 TEST(TensorTest, NumElements) {
-    Tensor tensor1("tensor1", DataType::FLOAT32, Shape{{2, 3}});
-    EXPECT_EQ(tensor1.NumElements(), 6);
+    Tensor tensor1("tensor1", DataType::kFloat32, Shape{{2, 3}});
+    EXPECT_EQ(tensor1.NumElements(), 6u);
 
-    Tensor tensor2("tensor2", DataType::FLOAT32, Shape{{2, 3, 4}});
-    EXPECT_EQ(tensor2.NumElements(), 24);
+    Tensor tensor2("tensor2", DataType::kFloat32, Shape{{2, 3, 4}});
+    EXPECT_EQ(tensor2.NumElements(), 24u);
 }
 
 TEST(TensorTest, IsConstant) {
-    Tensor tensor("test_tensor", DataType::FLOAT32, Shape{{2, 3}});
+    Tensor tensor("test_tensor", DataType::kFloat32, Shape{{2, 3}});
     EXPECT_FALSE(tensor.IsConstant());
 
     tensor.SetData(std::vector<uint8_t>(8));
@@ -54,14 +54,14 @@ TEST(TensorTest, IsConstant) {
 }
 
 TEST(TensorTest, DataOperations) {
-    Tensor tensor("test_tensor", DataType::FLOAT32, Shape{{2, 2}});  // 2x2 tensor = 4 elements = 16 bytes (32-bit)
+    Tensor tensor("test_tensor", DataType::kFloat32, Shape{{2, 2}});  // 2x2 tensor = 4 elements = 16 bytes (32-bit)
 
     std::vector<uint8_t> data(16, 0);
     tensor.SetData(data);
-    EXPECT_EQ(tensor.GetData().size(), 16);
+    EXPECT_EQ(tensor.GetData().size(), 16u);
 
     auto& tensorData = tensor.GetData();
-    EXPECT_EQ(tensorData.size(), 16);
+    EXPECT_EQ(tensorData.size(), 16u);
 
     for (size_t i = 0; i < data.size(); ++i) {
         EXPECT_EQ(data[i], tensorData[i]);
@@ -69,7 +69,7 @@ TEST(TensorTest, DataOperations) {
 }
 
 TEST(TensorTest, ProducerNode) {
-    Tensor tensor("test_tensor", DataType::FLOAT32, Shape{{2, 3}});
+    Tensor tensor("test_tensor", DataType::kFloat32, Shape{{2, 3}});
     EXPECT_TRUE(tensor.GetProducerNode().empty());
 
     tensor.SetProducerNode("node1");
@@ -77,18 +77,18 @@ TEST(TensorTest, ProducerNode) {
 }
 
 TEST(TensorTest, IsValid) {
-    Tensor valid_tensor("test_tensor", DataType::FLOAT32, Shape{{2, 3}});
+    Tensor valid_tensor("test_tensor", DataType::kFloat32, Shape{{2, 3}});
     EXPECT_TRUE(valid_tensor.IsValid());
 
-    Tensor invalid_dtype("invalid_dtype", DataType::UNKNOWN, Shape{{2, 3}});
+    Tensor invalid_dtype("invalid_dtype", DataType::kUnknown, Shape{{2, 3}});
     EXPECT_FALSE(invalid_dtype.IsValid());
 
-    Tensor invalid_shape("invalid_shape", DataType::FLOAT32, Shape{{-1, 3}});
+    Tensor invalid_shape("invalid_shape", DataType::kFloat32, Shape{{-1, 3}});
     EXPECT_FALSE(invalid_shape.IsValid());
 }
 
 TEST(TensorTest, ToString) {
-    Tensor tensor("test_tensor", DataType::FLOAT32, Shape{{2, 3}});
+    Tensor tensor("test_tensor", DataType::kFloat32, Shape{{2, 3}});
     std::string str = tensor.ToString();
 
     EXPECT_TRUE(str.find("test_tensor") != std::string::npos);

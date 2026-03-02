@@ -22,7 +22,7 @@ target_compile_features(edgeunic PRIVATE cxx_std_17)
 
 # Compiler flags
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(edgeunic PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -fno-rtti)
+    target_compile_options(edgeunic PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -fno-rtti -stdlib=libc++)
     target_link_options(edgeunic PRIVATE -stdlib=libc++)
 endif()
 

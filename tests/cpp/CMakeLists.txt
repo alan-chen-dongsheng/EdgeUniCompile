@@ -2,19 +2,11 @@
 
 include(CTest)
 
-# Find GTest
-find_package(GTest QUIET)
-if(NOT GTEST_FOUND)
-  message(STATUS "GTest not found, will build from source")
-  include(FetchContent)
-  FetchContent_Declare(
-    googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG v1.14.0
-    GIT_SHALLOW ON
-  )
-  FetchContent_MakeAvailable(googletest)
-endif()
+# Use manually built GTest
+set(GTEST_INCLUDE_DIR "/tmp/googletest/install/include")
+set(GTEST_LIBRARY "/tmp/googletest/install/lib/libgtest.a")
+set(GTEST_MAIN_LIBRARY "/tmp/googletest/install/lib/libgtest_main.a")
+include_directories(${GTEST_INCLUDE_DIR})
 
 # Add test executable
 add_executable(euc_test
@@ -27,9 +19,12 @@ add_executable(euc_test
 
 # Link libraries
 target_link_libraries(euc_test PRIVATE
-    GTest::gtest_main
+    /tmp/googletest/install/lib/libgtest.a
+    /tmp/googletest/install/lib/libgtest_main.a
+    /tmp/googletest/install/lib/libgmock.a
     edgeunic
-    flatbuffers
+    /tmp/flatbuffers/install/lib/libflatbuffers.a
+    pthread
 )
 
 # Include directories
@@ -44,7 +39,7 @@ gtest_discover_tests(euc_test)
 
 # Compiler flags
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(euc_test PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -fno-rtti)
+    target_compile_options(euc_test PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -fno-rtti -stdlib=libc++)
     target_link_options(euc_test PRIVATE -stdlib=libc++)
 endif()
 
