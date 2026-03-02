@@ -11,7 +11,12 @@
       "Bash(chmod +x examples/minimal_example.py && uv run python examples/minimal_example.py)",
       "Bash(uv run python examples/minimal_example.py)",
       "Bash(cd build && cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++)",
-      "Bash(cd .. && uv pip list)"
+      "Bash(cd .. && uv pip list)",
+      "Bash(cd .. && uv pip install -e .)",
+      "Bash(cd .. && rm -rf .venv && uv venv && uv pip install -e .)",
+      "*",
+      "Bash(uv pip install -e .)",
+      "Bash(cd .. && rm -f minimal_graph.fb)"
     ]
   }
 }
