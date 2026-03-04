@@ -12,4 +12,6 @@
 
 然后通过深度优先的拓扑排序,建立node的顺序,在根据node顺序,逐个给node建立指令,
 load里面可能有多条load, 比如load ifm1 , load ifm2 ,load weight, load bias, load gamma, load beta等
-e
+exec只有一条, store 也只有一条
+load指令之间是没有顺序的, 但是每一个node要先load完, 才能exec, exce完才能store,
+根据node顺序, 生成的指令就这样有了依赖, 根据依赖,建立linear sacn
