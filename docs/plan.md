@@ -4,3 +4,12 @@
 4. 然后c++的pass紧接上上一个python的完成的pass,开始实现一个pass打印一下网络里目前所有node的名字
 5. 在c++里写一个pass, 按照linear scan进行网络的内存分配, sram base地址是0, 最大是3M, dram基础地址是0, 最大内存是5G
 
+## 新增实现
+网络中每一个node, 都有三个指令:
+1. load [加载所有ifm , node 的 kernel等计算需要的数据]
+2. exec [执行计算]
+3. store [存储结果,将结果从sram写入到dram]
+
+然后通过深度优先的拓扑排序,建立node的顺序,在根据node顺序,逐个给node建立指令,
+load里面可能有多条load, 比如load ifm1 , load ifm2 ,load weight, load bias, load gamma, load beta等
+e

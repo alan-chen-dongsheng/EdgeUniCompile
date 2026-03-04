@@ -73,6 +73,49 @@ class TilingPass(PassBase):
         self.tile_size = tile_size
         self.sram_limit_bytes = sram_limit_bytes
 
+    def check_needs_tiling(self, graph: Graph, context) -> Tuple[int, int]:
+        """
+        Check if any Conv2D nodes in the graph need tiling.
+
+        Args:
+            graph: The computation graph to check.
+            context: The compilation context.
+
+        Returns:
+            Tuple of (nodes_needing_tiling, total_tiles_needed).
+        """
+        sram_size = self.sram_limit_bytes if self.sram_limit_bytes else getattr(context, 'sram_size', 2 * 1024 * 1024)
+
+        nodes_needing_tiling = 0
+        estimated_tiles = 0
+
+        for node in graph.nodes:
+            if node.op_type == "Conv2D":
+                if not node.outputs:
+                    continue
+                output_tensor = node.outputs[0]
+
+                # Calculate memory needed for output (float32 = 4 bytes)
+                total_size = output_tensor.shape.num_elements() * 4
+
+                # Also account for weights if they would exceed SRAM
+                if len(node.inputs) > 1:
+                    weights_size = node.inputs[1].shape.num_elements() * 4
+                    total_size += weights_size
+
+                if total_size > sram_size:
+                    nodes_needing_tiling += 1
+
+                    # Estimate number of tiles needed
+                    out_height = output_tensor.shape.dims[2]
+                    out_width = output_tensor.shape.dims[3]
+                    tile_height, tile_width = self.tile_size
+                    tiles_y = math.ceil(out_height / tile_height)
+                    tiles_x = math.ceil(out_width / tile_width)
+                    estimated_tiles += tiles_x * tiles_y
+
+        return nodes_needing_tiling, estimated_tiles
+
     def run(self, graph: Graph, context):
         """
         Run the tiling pass on the graph.
@@ -89,6 +132,16 @@ class TilingPass(PassBase):
 
         sram_size = self.sram_limit_bytes if self.sram_limit_bytes else getattr(context, 'sram_size', 2 * 1024 * 1024)
         print(f"SRAM limit: {sram_size / (1024 * 1024):.1f}MB")
+
+        # First check if any nodes need tiling
+        nodes_needing_tiling, estimated_tiles = self.check_needs_tiling(graph, context)
+
+        if nodes_needing_tiling == 0:
+            print("No Conv2D nodes need tiling (all fit in SRAM)")
+            return Status.ok()
+
+        print(f"Found {nodes_needing_tiling} Conv2D nodes that need tiling")
+        print(f"Estimated total tiles: {estimated_tiles}")
 
         # Collect Conv2D nodes that need tiling
         nodes_to_tile = []
@@ -107,12 +160,6 @@ class TilingPass(PassBase):
 
                 if total_size > sram_size:
                     nodes_to_tile.append((node, total_size))
-
-        if not nodes_to_tile:
-            print("No Conv2D nodes need tiling (all fit in SRAM)")
-            return Status.ok()
-
-        print(f"Found {len(nodes_to_tile)} Conv2D nodes that need tiling")
 
         # Process each node that needs tiling
         for node, total_size in nodes_to_tile:
