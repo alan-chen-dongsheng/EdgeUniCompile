@@ -16,7 +16,10 @@
       "Bash(cd .. && rm -rf .venv && uv venv && uv pip install -e .)",
       "*",
       "Bash(uv pip install -e .)",
-      "Bash(cd .. && rm -f minimal_graph.fb)"
+      "Bash(cd .. && rm -f minimal_graph.fb)",
+      "Bash(rm -rf build && mkdir build && cd build && cmake .. -DCMAKE_CXX_COMPILER=clang++ 2>&1)",
+      "Bash(ctest --output-on-failure 2>&1 | head -50)",
+      "Bash(uv run pytest tests/python/ -v 2>&1 | head -100)"
     ]
   }
 }

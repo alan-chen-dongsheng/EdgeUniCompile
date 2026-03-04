@@ -81,3 +81,9 @@ private:
 };
 
 }  // namespace edgeunic
+
+// Type aliases
+namespace edgeunic {
+    using Context = CompileContext;
+    using ContextPtr = std::shared_ptr<CompileContext>;
+}

@@ -15,6 +15,7 @@ add_executable(euc_test
     ir/graph_test.cpp
     ir/node_test.cpp
     ir/tensor_test.cpp
+    passes/pass_test.cpp
 )
 
 # Link libraries

@@ -37,6 +37,11 @@ DataType StringToDataType(const std::string& str);
 struct Shape {
     std::vector<int64_t> dims;
 
+    Shape() = default;
+    Shape(std::initializer_list<int64_t> init) : dims(init) {}
+    Shape(const std::vector<int64_t>& d) : dims(d) {}
+    Shape(std::vector<int64_t>&& d) : dims(std::move(d)) {}
+
     bool operator==(const Shape& other) const { return dims == other.dims; }
     bool operator!=(const Shape& other) const { return !(*this == other); }
 

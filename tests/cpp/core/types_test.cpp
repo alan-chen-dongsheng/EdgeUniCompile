@@ -43,10 +43,10 @@ TEST(DataTypeTest, StringToDataType) {
 }
 
 TEST(ShapeTest, NumElements) {
-    Shape shape{{2, 3}};
+    Shape shape{2, 3};
     EXPECT_EQ(shape.NumElements(), 6u);
 
-    Shape shape3D{{2, 3, 4}};
+    Shape shape3D{2, 3, 4};
     EXPECT_EQ(shape3D.NumElements(), 24u);
 
     Shape scalar{};
@@ -57,29 +57,29 @@ TEST(ShapeTest, Rank) {
     Shape scalar{};
     EXPECT_EQ(scalar.Rank(), 0u);
 
-    Shape vector{{5}};
+    Shape vector{5};
     EXPECT_EQ(vector.Rank(), 1u);
 
-    Shape matrix{{2, 3}};
+    Shape matrix{2, 3};
     EXPECT_EQ(matrix.Rank(), 2u);
 
-    Shape tensor3D{{2, 3, 4}};
+    Shape tensor3D{2, 3, 4};
     EXPECT_EQ(tensor3D.Rank(), 3u);
 }
 
 TEST(ShapeTest, ValidShape) {
-    EXPECT_TRUE((Shape{{2, 3}}.IsValid()));
-    EXPECT_TRUE((Shape{{1, 1, 1}}.IsValid()));
-    EXPECT_FALSE((Shape{{0, 3}}.IsValid()));
-    EXPECT_FALSE((Shape{{-1, 3}}.IsValid()));
-    EXPECT_FALSE((Shape{{2, 0}}.IsValid()));
+    EXPECT_TRUE((Shape{2, 3}.IsValid()));
+    EXPECT_TRUE((Shape{1, 1, 1}.IsValid()));
+    EXPECT_FALSE((Shape{0, 3}.IsValid()));
+    EXPECT_FALSE((Shape{-1, 3}.IsValid()));
+    EXPECT_FALSE((Shape{2, 0}.IsValid()));
 }
 
 TEST(ShapeTest, ToString) {
-    EXPECT_EQ((Shape{{2, 3}}.ToString()), "[2, 3]");
-    EXPECT_EQ((Shape{{1, 1, 1}}.ToString()), "[1, 1, 1]");
-    EXPECT_EQ((Shape{{}}.ToString()), "[]");
-    EXPECT_EQ((Shape{{10}}.ToString()), "[10]");
+    EXPECT_EQ((Shape{2, 3}.ToString()), "[2, 3]");
+    EXPECT_EQ((Shape{1, 1, 1}.ToString()), "[1, 1, 1]");
+    EXPECT_EQ((Shape{}.ToString()), "[]");
+    EXPECT_EQ((Shape{10}.ToString()), "[10]");
 }
 
 TEST(OpTypeTest, OpTypeToString) {

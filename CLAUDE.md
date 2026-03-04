@@ -110,11 +110,15 @@ rm -rf __pycache__/
 
 ## Key Components
 
+## Key Components
+
 ### C++ Core
 
 - **Core Types:** `/include/edgeunicompile/core/types.h` - DataType, Shape, OpType, AttributeValue
-- **Context:** `/include/edgeunicompile/core/context.h` - CompileContext
+- **Context:** `/include/edgeunicompile/core/context.h` - CompileContext, Context
 - **Graph IR:** `/include/edgeunicompile/ir/` - Graph, Node, Tensor
+- **Passes:** `/include/edgeunicompile/passes/` - PassBase, PassManager, ConstantFoldingPass
+- **FlatBuffer:** `/include/edgeunicompile/flatbuf/` - FlatBufferConverter, edgeunicompile.fbs schema
 
 ### Python Package
 
@@ -122,14 +126,33 @@ rm -rf __pycache__/
 - **Graph IR:** `/python/edgeunicompile/ir/__init__.py` - Graph, Node, Tensor
 - **ONNX Conversion:** `/python/edgeunicompile/onnx/__init__.py` - ONNXConverter
 - **Pass System:** `/python/edgeunicompile/passes/__init__.py` - PassBase, PassManager
-- **FlatBuffer Support:** `/python/edgeunicompile/flatbuf/__init__.py` - FlatBufferBuilder
+- **Tiling Pass:** `/python/edgeunicompile/passes/tiling_pass.py` - TilingPass (slice-compute-concat)
+- **FlatBuffer Support:** `/python/edgeunicompile/flatbuf/__init__.py` - FlatBufferBuilder, schema-based serialization
 - **MLIR Integration:** `/python/edgeunicompile/mlir/__init__.py` - MLIRInstaller, MLIRContext
 
 ### Build Configuration
 
 - **Root CMakeLists:** `/CMakeLists.txt` - Main build configuration
+- **Src CMakeLists:** `/src/CMakeLists.txt` - Library build with FlatBuffer code generation
 - **Python Package:** `/pyproject.toml` - uv package manager configuration
 - **CMake Modules:** `/cmake/` - FindFlatBuffers.cmake, FindMLIR.cmake
+
+### FlatBuffer Schema
+
+The FlatBuffer schema (`/include/edgeunicompile/flatbuf/edgeunicompile.fbs`) defines the shared IR:
+- `DataType` enum - Tensor data types
+- `OpType` enum - Operation types (Conv2D, Slice, Concat, etc.)
+- `MemoryLocation` enum - DRAM, SRAM, L2Cache, Register
+- `Graph`, `Node`, `Tensor`, `Shape`, `Attribute` tables
+
+To regenerate FlatBuffer code:
+```bash
+# C++ (automatic via CMake if flatc is found)
+flatc -c --gen-mutable include/edgeunicompile/flatbuf/edgeunicompile.fbs
+
+# Python
+flatc -p --gen-mutable include/edgeunicompile/flatbuf/edgeunicompile.fbs
+```
 
 ## Dependencies
 
@@ -151,12 +174,16 @@ rm -rf __pycache__/
 
 ## Current Status
 
-The project is now at a **foundational stage** with core infrastructure implemented.
+The project has a **solid foundation** with core infrastructure implemented.
 
 ### Completed:
 
 - C++ core types and context management
 - C++ IR (Graph, Node, Tensor) with tests
+- **C++ Pass System** - PassBase, PassManager, ConstantFoldingPass
+- **FlatBuffer Schema** - edgeunicompile.fbs for shared C++/Python IR
+- **FlatBuffer Converter** - C++ and Python serialization/deserialization
+- **Python Tiling Pass** - Slice-compute-concat pattern for SRAM-aware compilation
 - Python package with core types and graph representation
 - Basic CMake build system with dependency management
 - Documentation structure
@@ -164,10 +191,9 @@ The project is now at a **foundational stage** with core infrastructure implemen
 
 ### In Progress:
 
-- Full pass system implementation
 - MLIR integration is outlined but not fully implemented
 - ONNX converter is stubbed but not fully functional
-- FlatBuffer schema and converter need completion
+- Additional C++ passes (dead code elimination, etc.)
 
 ## Design Decisions
 

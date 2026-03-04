@@ -4,10 +4,11 @@ A comprehensive compiler framework designed specifically for edge AI devices, ad
 
 ## Features
 
-- **ONNX to FlatBuffer Conversion**: Efficient model conversion from ONNX to FlatBuffer format using Python
+- **FlatBuffer Schema**: Shared IR definition for C++ and Python via FlatBuffers (`edgeunicompile.fbs`)
+- **ONNX to FlatBuffer Conversion**: Efficient model conversion from ONNX to FlatBuffer format
 - **Mixed C++/Python Pass System**: Flexible pass infrastructure supporting both C++ and Python passes
-- **SRAM-Aware Tiling**: Optimizes operations to fit SRAM size constraints
-- **DAG to Instructions Lowering**: Converts computation graphs to target instructions
+- **SRAM-Aware Tiling**: Slice-compute-concat pattern to fit SRAM constraints
+- **C++ Passes**: Constant folding, pass manager with registration
 - **MLIR Integration**: Advanced optimizations using MLIR framework
 - **Tiling and Memory Planning**: Memory usage optimization for edge devices
 
@@ -133,20 +134,30 @@ The ONNX converter transforms ONNX models to EdgeUniCompile's internal graph rep
 
 The pass system supports both C++ and Python passes. Passes can modify the graph for optimization:
 
-- Constant folding
-- Dead code elimination
-- Tiling
-- Memory planning
-- Optimization passes
+**C++ Passes:**
+- `PassBase` - Abstract base class for all passes
+- `PassManager` - Orchestrates pass execution with registration and configuration
+- `ConstantFoldingPass` - Evaluates constant expressions at compile time
+
+**Python Passes:**
+- `TilingPass` - SRAM-aware tiling with slice/compute/concat pattern
+- `PassBase` - Python base class for passes
+- `PassManager` - Python pass manager
 
 ### Tiling Pass
 
-The tiling pass optimizes operations to fit SRAM size constraints. It:
+The tiling pass optimizes operations to fit SRAM size constraints using a **slice-compute-concat** pattern:
 
-1. Analyzes operation memory requirements
-2. Determines optimal tile sizes
-3. Generates tiled operations
-4. Plans memory usage
+1. **Slice**: Extract input feature map regions via explicit Slice nodes
+2. **Compute**: Run convolution on sliced input (fits in SRAM)
+3. **Concat**: Combine tile outputs, writing to DRAM (releases SRAM)
+
+Memory flow: `DRAM -> Slice(SRAM) -> Conv2D(SRAM) -> Concat -> DRAM`
+
+The pass supports:
+- Configurable tile sizes
+- Hierarchical concatenation for 2D tiling
+- SRAM limit awareness
 
 ### MLIR Integration
 
