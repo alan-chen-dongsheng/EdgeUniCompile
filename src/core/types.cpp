@@ -198,24 +198,25 @@ std::string Status::ToString() const {
     return "UNKNOWN: " + message_;
 }
 
-std::ostream& operator<<(std::ostream& os, DataType type) {
-    os << DataTypeToString(type);
+}  // namespace edgeunic
+
+// Stream operators for debugging
+std::ostream& operator<<(std::ostream& os, edgeunic::DataType type) {
+    os << edgeunic::DataTypeToString(type);
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const Shape& shape) {
+std::ostream& operator<<(std::ostream& os, const edgeunic::Shape& shape) {
     os << shape.ToString();
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, OpType op) {
-    os << OpTypeToString(op);
+std::ostream& operator<<(std::ostream& os, edgeunic::OpType op) {
+    os << edgeunic::OpTypeToString(op);
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const Status& status) {
+std::ostream& operator<<(std::ostream& os, const edgeunic::Status& status) {
     os << status.ToString();
     return os;
 }
-
-}  // namespace edgeunic

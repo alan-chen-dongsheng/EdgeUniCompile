@@ -8,6 +8,14 @@
 
 namespace edgeunic {
 
+// Memory location enum
+enum class MemoryLocation : uint8_t {
+    DRAM = 0,      // External DRAM (large, slow)
+    SRAM = 1,      // On-chip SRAM (small, fast)
+    L2Cache = 2,   // L2 cache (medium size, medium speed)
+    Register = 3,  // Registers (very small, very fast)
+};
+
 class Tensor {
 public:
     Tensor() = default;
@@ -35,6 +43,13 @@ public:
     const std::string& GetProducerNode() const { return producer_node_; }
     void SetProducerNode(const std::string& node_name) { producer_node_ = node_name; }
 
+    // Memory location and offset
+    MemoryLocation GetMemoryLocation() const { return memory_location_; }
+    void SetMemoryLocation(MemoryLocation location) { memory_location_ = location; }
+
+    uint64_t GetMemoryOffset() const { return memory_offset_; }
+    void SetMemoryOffset(uint64_t offset) { memory_offset_ = offset; }
+
     bool IsValid() const;
     std::string ToString() const;
 
@@ -45,6 +60,8 @@ private:
     std::vector<uint8_t> data_;
     bool is_constant_ = false;
     std::string producer_node_;
+    MemoryLocation memory_location_ = MemoryLocation::DRAM;
+    uint64_t memory_offset_ = 0;
 };
 
 using TensorPtr = std::shared_ptr<Tensor>;

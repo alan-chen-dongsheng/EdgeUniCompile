@@ -153,6 +153,6 @@ private:
 
 // Stream operators for debugging
 std::ostream& operator<<(std::ostream& os, edgeunic::DataType type);
-std::ostream& operator<<(std::ostream& os, edgeunic::Shape shape);
+std::ostream& operator<<(std::ostream& os, const edgeunic::Shape& shape);
 std::ostream& operator<<(std::ostream& os, edgeunic::OpType op);
-std::ostream& operator<<(std::ostream& os, edgeunic::Status status);
+std::ostream& operator<<(std::ostream& os, const edgeunic::Status& status);
