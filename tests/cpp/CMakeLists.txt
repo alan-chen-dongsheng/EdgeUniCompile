@@ -16,6 +16,7 @@ add_executable(euc_test
     ir/node_test.cpp
     ir/tensor_test.cpp
     passes/pass_test.cpp
+    codegen/instruction_test.cpp
 )
 
 # Link libraries

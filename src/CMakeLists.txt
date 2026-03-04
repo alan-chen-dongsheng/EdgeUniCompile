@@ -55,6 +55,8 @@ add_library(edgeunic SHARED
     passes/memory_allocation_pass.cpp
     flatbuf/flatbuf_converter.cpp
     ffi/ffi_bindings.cpp
+    codegen/instruction.cpp
+    codegen/instruction_scheduler.cpp
 )
 
 # Add dependency on generated FlatBuffer code
@@ -103,5 +105,7 @@ set_target_properties(edgeunic PROPERTIES
          ${CMAKE_SOURCE_DIR}/include/edgeunicompile/passes/print_node_names_pass.h;\
          ${CMAKE_SOURCE_DIR}/include/edgeunicompile/passes/memory_allocation_pass.h;\
          ${CMAKE_SOURCE_DIR}/include/edgeunicompile/flatbuf/flatbuf_converter.h;\
-         ${CMAKE_SOURCE_DIR}/include/edgeunicompile/ffi/ffi_bindings.h"
+         ${CMAKE_SOURCE_DIR}/include/edgeunicompile/ffi/ffi_bindings.h;\
+         ${CMAKE_SOURCE_DIR}/include/edgeunicompile/codegen/instruction.h;\
+         ${CMAKE_SOURCE_DIR}/include/edgeunicompile/codegen/instruction_scheduler.h"
 )
