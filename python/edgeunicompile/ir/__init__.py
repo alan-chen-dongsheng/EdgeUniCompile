@@ -27,6 +27,22 @@ class Tensor:
     data: Optional[bytes] = None
     producer_node: Optional[str] = None
 
+    def __post_init__(self):
+        """Convert dtype and shape to proper types if needed."""
+        from edgeunicompile.core import Shape, DataType
+
+        # Convert dtype from string to DataType enum if needed
+        if isinstance(self.dtype, str):
+            dtype_value = self.dtype.lower()
+            for dtype in DataType:
+                if dtype.value == dtype_value or dtype.name.lower() == dtype_value:
+                    self.dtype = dtype
+                    break
+
+        # Convert shape from list/tuple to Shape if needed
+        if not isinstance(self.shape, Shape):
+            self.shape = Shape(list(self.shape))
+
     def num_elements(self) -> int:
         """Calculate total number of elements in the tensor."""
         return self.shape.num_elements()

@@ -113,12 +113,20 @@ class MLIRContext:
         self.context = context
         self._mlir_context = None
         self._session = None
+        self._use_mock = not MLIRInstaller.is_installed()
 
-        # Initialize MLIR
-        self._initialize_mlir()
+        # Initialize MLIR (or use mock)
+        if self._use_mock:
+            print("  Using mock MLIR (real MLIR not installed)")
+        else:
+            self._initialize_mlir()
 
     def _initialize_mlir(self):
         """Initialize the MLIR context."""
+        if self._use_mock:
+            # Mock initialization
+            return
+
         if not MLIRInstaller.is_installed():
             raise ImportError("MLIR not installed. Please run MLIRInstaller.install()")
 
@@ -154,36 +162,116 @@ class MLIRContext:
         Returns:
             MLIR string representation.
         """
-        # For now, generate a simple MLIR module
+        # Generate MLIR module using EdgeUnityCompile dialect
         mlir_str = []
         mlir_str.append("module {")
 
-        # Add function definition
-        mlir_str.append(f"  func.func @main() -> () {{")
+        # Build input types from graph input tensors
+        input_types = []
+        for inp in graph.input_tensors:
+            shape_str = "x".join(str(d) if d > 0 else "?" for d in inp.shape.dims)
+            input_types.append(f"tensor<{shape_str}xf32>")
 
-        # Add operations
-        for node in graph.get_nodes():
-            op_str = self._node_to_mlir(node)
+        # Build output types from graph output tensors
+        output_types = []
+        for out in graph.output_tensors:
+            shape_str = "x".join(str(d) if d > 0 else "?" for d in out.shape.dims)
+            output_types.append(f"tensor<{shape_str}xf32>")
+
+        # Create function signature
+        inputs = ", ".join(f"%{inp.name}: {typ}" for inp, typ in zip(graph.input_tensors, input_types))
+        outputs = ", ".join(output_types)
+        mlir_str.append(f"  func.func @main({inputs}) -> {outputs} {{")
+
+        # Build tensor name to SSA value map
+        tensor_to_ssa = {}
+        for inp in graph.input_tensors:
+            tensor_to_ssa[inp.name] = f"%{inp.name}"
+
+        # Add operations using edgeuni dialect
+        for node in graph.nodes:
+            op_str, output_ssa = self._node_to_mlir(node, tensor_to_ssa)
             mlir_str.append(f"    {op_str}")
+            # Map output tensor to SSA value
+            for out_tensor in node.outputs:
+                tensor_to_ssa[out_tensor.name] = output_ssa
 
-        mlir_str.append("    return")
+        # Return the output
+        if graph.output_tensors:
+            output_ssa = tensor_to_ssa.get(graph.output_tensors[0].name, "%output")
+            mlir_str.append(f"    func.return {output_ssa}")
+
         mlir_str.append("  }")
         mlir_str.append("}")
 
         return "\n".join(mlir_str)
 
-    def _node_to_mlir(self, node) -> str:
+    def _node_to_mlir(self, node, tensor_to_ssa: dict) -> tuple:
         """
         Convert EdgeUniCompile Node to MLIR operation.
 
         Args:
             node: EdgeUniCompile Node.
+            tensor_to_ssa: Map from tensor name to SSA value.
 
         Returns:
-            MLIR operation string.
+            Tuple of (MLIR operation string, output SSA value).
         """
-        # For now, create simple MLIR operations
-        return f"// {node.get_name()}: {node.get_op_type()}"
+        # Get input SSA values
+        input_ssa = []
+        for inp_tensor in node.inputs:
+            if inp_tensor.name in tensor_to_ssa:
+                input_ssa.append(tensor_to_ssa[inp_tensor.name])
+
+        # Get output tensor for SSA mapping
+        output_tensor = node.outputs[0] if node.outputs else None
+        output_ssa = f"%{output_tensor.name}" if output_tensor else "%result"
+
+        # Get attributes
+        kernel_shape = node.attributes.get('kernel_shape', [3, 3])
+        strides = node.attributes.get('strides', [1, 1])
+        pads = node.attributes.get('pads', [1, 1, 1, 1])
+        dilations = node.attributes.get('dilations', [1, 1])
+        tiling = node.attributes.get('tiling', None)
+
+        # Map ONNX/EdgeUniCompile ops to MLIR edgeuni dialect
+        op_type_map = {
+            "Conv2D": "edgeuni.conv2d",
+            "Relu": "edgeuni.relu",
+            "Sigmoid": "edgeuni.sigmoid",
+            "Tanh": "edgeuni.tanh",
+            "Softmax": "edgeuni.softmax",
+            "MaxPool2D": "edgeuni.max_pool2d",
+            "AveragePool2D": "edgeuni.avg_pool2d",
+            "Add": "edgeuni.add",
+            "Subtract": "edgeuni.sub",
+            "Multiply": "edgeuni.mul",
+            "MatMul": "edgeuni.matmul",
+            "Reshape": "edgeuni.reshape",
+            "Transpose": "edgeuni.transpose",
+        }
+
+        mlir_op = op_type_map.get(node.op_type, "edgeuni.custom")
+
+        # Build attribute string
+        attrs = []
+        if node.op_type == "Conv2D":
+            attrs.append(f"kernel_shape = {kernel_shape}")
+            attrs.append(f"strides = {strides}")
+            attrs.append(f"pads = {pads}")
+            attrs.append(f"dilations = {dilations}")
+        if tiling:
+            attrs.append(f"tiling = {tiling}")
+
+        attr_str = ", ".join(attrs)
+        if attr_str:
+            attr_str = f"{{{attr_str}}}"
+
+        # Build operation
+        inputs_str = ", ".join(input_ssa)
+        op_str = f"{output_ssa} = {mlir_op}({inputs_str}) {attr_str}"
+
+        return op_str, output_ssa
 
     @property
     def mlir_context(self):
@@ -292,7 +380,7 @@ class MLIRModule:
             "\n"
             "int main() {\n"
             "    // Generated from EdgeUniCompile\n"
-            "    // Target: {}\n".format(target) +
+            f"    // Target: {target}\n"
             "    printf(\"Hello from EdgeUniCompile!\\n\");\n"
             "    return 0;\n"
             "}\n"

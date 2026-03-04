@@ -36,27 +36,50 @@ class FlatBufferBuilder:
         Returns:
             Serialized FlatBuffer bytes.
         """
-        # For now, create a simple flatbuffer structure
-        # Build a placeholder buffer with graph metadata
-        metadata = {
+        import json
+
+        # For now, serialize to JSON and then encode as bytes
+        # This will be replaced with real FlatBuffer in the future
+        data = {
             "version": "0.1.0",
             "name": graph.name,
-            "nodes": len(graph.nodes),
-            "tensors": len(graph.tensors)
+            "nodes": [],
+            "tensors": [],
+            "input_tensors": [],
+            "output_tensors": []
         }
 
-        # Simple serialization for now (will be replaced with real FlatBuffer)
-        data = bytearray()
-        data.extend(struct.pack("<I", len(metadata["version"])))
-        data.extend(metadata["version"].encode("utf-8"))
+        # Serialize tensors
+        tensor_id_map = {}
+        for i, tensor in enumerate(graph.tensors):
+            tensor_data = {
+                "id": i,
+                "name": tensor.name,
+                "data_type": tensor.dtype.value,
+                "shape": tensor.shape.dims,
+                "data": list(tensor.data) if tensor.data else []
+            }
+            data["tensors"].append(tensor_data)
+            tensor_id_map[tensor] = i
 
-        data.extend(struct.pack("<I", len(metadata["name"])))
-        data.extend(metadata["name"].encode("utf-8"))
+        # Serialize nodes
+        for node in graph.nodes:
+            node_data = {
+                "name": node.name,
+                "op_type": node.op_type,
+                "inputs": [tensor_id_map[tensor] for tensor in node.inputs],
+                "outputs": [tensor_id_map[tensor] for tensor in node.outputs],
+                "attributes": dict(node.attributes)
+            }
+            data["nodes"].append(node_data)
 
-        data.extend(struct.pack("<Q", metadata["nodes"]))
-        data.extend(struct.pack("<Q", metadata["tensors"]))
+        # Serialize input/output tensors
+        data["input_tensors"] = [tensor_id_map[tensor] for tensor in graph.input_tensors]
+        data["output_tensors"] = [tensor_id_map[tensor] for tensor in graph.output_tensors]
 
-        return bytes(data)
+        # Convert to JSON and then bytes
+        json_str = json.dumps(data, indent=0)
+        return bytes(json_str, "utf-8")
 
     @staticmethod
     def parse(data: bytes,
@@ -71,33 +94,57 @@ class FlatBufferBuilder:
         Returns:
             EdgeUniCompile Graph.
         """
-        # For now, create a placeholder graph
-        # In real implementation, this will parse the actual FlatBuffer
+        import json
 
-        # Create a simple graph
+        # For now, parse JSON from bytes
+        # This will be replaced with real FlatBuffer in the future
+        json_str = data.decode("utf-8")
+        data = json.loads(json_str)
+
         if context is None:
             from edgeunicompile.core import Context
             context = Context()
 
-        graph = Graph("flatbuffer_graph")
+        graph = Graph(data["name"])
 
-        # Add some dummy nodes and tensors
-        tensor1 = Tensor("input1", "float32", (2, 3))
-        tensor2 = Tensor("input2", "float32", (2, 3))
-        tensor3 = Tensor("output1", "float32", (2, 3))
+        # Create tensors
+        tensor_list = []
+        id_to_tensor = {}
+        for tensor_data in data["tensors"]:
+            from edgeunicompile.core import Shape, DataType
+            tensor = Tensor(
+                tensor_data["name"],
+                DataType(tensor_data["data_type"]),
+                Shape(list(tensor_data["shape"]))
+            )
+            if tensor_data["data"]:
+                tensor.data = bytes(tensor_data["data"])
+            graph.add_tensor(tensor)
+            tensor_list.append(tensor)
+            id_to_tensor[tensor_data["id"]] = tensor
 
-        graph.add_tensor(tensor1)
-        graph.add_tensor(tensor2)
-        graph.add_tensor(tensor3)
-        graph.add_input_tensor(tensor1)
-        graph.add_input_tensor(tensor2)
-        graph.add_output_tensor(tensor3)
+        # Create nodes
+        for node_data in data["nodes"]:
+            node = Node(node_data["name"], node_data["op_type"])
 
-        node = Node("add_node", "Add")
-        node.add_input(tensor1)
-        node.add_input(tensor2)
-        node.add_output(tensor3)
-        graph.add_node(node)
+            for tensor_id in node_data["inputs"]:
+                node.add_input(id_to_tensor[tensor_id])
+
+            for tensor_id in node_data["outputs"]:
+                node.add_output(id_to_tensor[tensor_id])
+
+            for key, value in node_data.get("attributes", {}).items():
+                node.set_attribute(key, value)
+
+            graph.add_node(node)
+
+        # Add input tensors
+        for tensor_id in data["input_tensors"]:
+            graph.add_input_tensor(id_to_tensor[tensor_id])
+
+        # Add output tensors
+        for tensor_id in data["output_tensors"]:
+            graph.add_output_tensor(id_to_tensor[tensor_id])
 
         return graph
 
@@ -122,7 +169,8 @@ class FlatBufferBuilder:
                 f.write(data)
             return Status()
         except Exception as e:
-            return Status(code=1, message=f"Failed to save to file: {str(e)}")
+            from edgeunicompile.core import StatusCode
+            return Status(code=StatusCode.ERROR, message=f"Failed to save to file: {str(e)}")
 
     @staticmethod
     def load_from_file(filename: str,

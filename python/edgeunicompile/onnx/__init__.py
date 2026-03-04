@@ -94,8 +94,8 @@ class ONNXConverter:
         # Convert data type
         dtype = ONNXConverter._convert_data_type(tensor_proto.data_type)
 
-        # Convert shape
-        shape = Shape([dim.dim_value for dim in tensor_proto.dims])
+        # Convert shape - tensor_proto.dims is a list of integers
+        shape = Shape(list(tensor_proto.dims))
 
         # Create tensor
         tensor = Tensor(tensor_proto.name, dtype, shape)
@@ -104,7 +104,6 @@ class ONNXConverter:
         if tensor_proto.raw_data:
             tensor.data = tensor_proto.raw_data
 
-        tensor.set_attribute("onnx_type", "tensor")
         return tensor
 
     @staticmethod
@@ -136,8 +135,6 @@ class ONNXConverter:
         # Create tensor
         tensor = Tensor(value_info.name, dtype, shape)
 
-        # Add ONNX type info
-        tensor.set_attribute("onnx_type", "value_info")
         return tensor
 
     @staticmethod
