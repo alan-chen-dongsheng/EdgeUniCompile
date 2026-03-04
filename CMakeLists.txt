@@ -1,4 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
+
+# Set CMAKE_CXX_FLAGS before project() to ensure FetchContent packages use libc++
+set(CMAKE_CXX_FLAGS_INIT "-stdlib=libc++" CACHE STRING "" FORCE)
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-stdlib=libc++" CACHE STRING "" FORCE)
+set(CMAKE_SHARED_LINKER_FLAGS_INIT "-stdlib=libc++" CACHE STRING "" FORCE)
+
 project(EdgeUniCompile VERSION 0.1.0 LANGUAGES CXX)
 
 # C++ standard
@@ -16,8 +22,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(-Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter)
     add_compile_options(-fno-rtti)  # For MLIR compatibility
     add_link_options(-stdlib=libc++)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -stdlib=libc++")
 endif()
 
 # Build type

@@ -7,11 +7,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## EdgeUniCompile - Edge Universal Compile Framework
 
 A comprehensive compiler framework designed specifically for edge AI devices. It supports:
+
 - ONNX to FlatBuffer conversion
 - Mixed C++/Python pass system
 - SRAM-aware tiling
 - MLIR integration
 - Target-specific code generation
+
+## rules
+
+1. make sure you can build the project success if you do code changes.
 
 ## Project Architecture
 
@@ -44,6 +49,7 @@ EdgeUniCompile/
 ### Build System
 
 **Dependencies:**
+
 - C++17
 - Python 3.13
 - Clang (default compiler)
@@ -105,11 +111,13 @@ rm -rf __pycache__/
 ## Key Components
 
 ### C++ Core
+
 - **Core Types:** `/include/edgeunicompile/core/types.h` - DataType, Shape, OpType, AttributeValue
 - **Context:** `/include/edgeunicompile/core/context.h` - CompileContext
 - **Graph IR:** `/include/edgeunicompile/ir/` - Graph, Node, Tensor
 
 ### Python Package
+
 - **Core Types:** `/python/edgeunicompile/core/__init__.py` - Context, Status, Shape
 - **Graph IR:** `/python/edgeunicompile/ir/__init__.py` - Graph, Node, Tensor
 - **ONNX Conversion:** `/python/edgeunicompile/onnx/__init__.py` - ONNXConverter
@@ -118,6 +126,7 @@ rm -rf __pycache__/
 - **MLIR Integration:** `/python/edgeunicompile/mlir/__init__.py` - MLIRInstaller, MLIRContext
 
 ### Build Configuration
+
 - **Root CMakeLists:** `/CMakeLists.txt` - Main build configuration
 - **Python Package:** `/pyproject.toml` - uv package manager configuration
 - **CMake Modules:** `/cmake/` - FindFlatBuffers.cmake, FindMLIR.cmake
@@ -125,11 +134,13 @@ rm -rf __pycache__/
 ## Dependencies
 
 ### C++
+
 - **FlatBuffers:** Automatic download if not found (v24.3.25)
 - **MLIR:** Optional (will be installed via Python if needed)
 - **GTest:** For testing (downloaded if not found)
 
 ### Python
+
 - **numpy>=2.0**: Array operations
 - **onnx>=1.16**: ONNX format support
 - **flatbuffers>=24.0**: Serialization
@@ -143,6 +154,7 @@ rm -rf __pycache__/
 The project is now at a **foundational stage** with core infrastructure implemented.
 
 ### Completed:
+
 - C++ core types and context management
 - C++ IR (Graph, Node, Tensor) with tests
 - Python package with core types and graph representation
@@ -151,6 +163,7 @@ The project is now at a **foundational stage** with core infrastructure implemen
 - Project README
 
 ### In Progress:
+
 - Full pass system implementation
 - MLIR integration is outlined but not fully implemented
 - ONNX converter is stubbed but not fully functional
@@ -159,6 +172,7 @@ The project is now at a **foundational stage** with core infrastructure implemen
 ## Design Decisions
 
 **Architecture Principles:**
+
 - **Separation of concerns:** Clear layers between IR, passes, and lowering
 - **Mixed language support:** C++ for performance-critical paths, Python for flexibility
 - **Modular design:** Easy to add new passes, operations, and targets
@@ -166,6 +180,7 @@ The project is now at a **foundational stage** with core infrastructure implemen
 - **MLIR:** For advanced optimizations and code generation
 
 **Edge Device Constraints:**
+
 - **SRAM-aware tiling:** Optimize operations to fit within SRAM size
 - **Memory planning:** Efficient use of limited memory resources
 - **Compact serialization:** FlatBuffers for small model sizes
