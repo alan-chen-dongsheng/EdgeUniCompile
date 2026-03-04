@@ -58,6 +58,42 @@ if(NOT FLATBUFFERS_FOUND)
   FetchContent_MakeAvailable(flatbuffers)
 endif()
 
+# Find or fetch pybind11 for Python bindings (optional)
+set(PYTHON_BINDINGS_AVAILABLE OFF)
+
+# Check if we should build Python bindings
+option(BUILD_PYTHON_BINDINGS "Build pybind11 Python bindings" OFF)
+
+if(BUILD_PYTHON_BINDINGS)
+  find_package(pybind11 CONFIG)
+  if(NOT pybind11_FOUND)
+    message(STATUS "pybind11 not found, will build from source")
+    include(FetchContent)
+    FetchContent_Declare(
+      pybind11
+      GIT_REPOSITORY https://github.com/pybind/pybind11.git
+      GIT_TAG v2.11.1
+      GIT_SHALLOW ON
+    )
+    FetchContent_MakeAvailable(pybind11)
+  else()
+    message(STATUS "pybind11 found: ${pybind11_VERSION}")
+  endif()
+
+  # Try to find Python development files
+  find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+
+  # Check if Python headers actually exist
+  if(EXISTS "${Python_INCLUDE_DIRS}/Python.h")
+    message(STATUS "Python found: ${Python_VERSION} (headers: ${Python_INCLUDE_DIRS})")
+    set(PYTHON_BINDINGS_AVAILABLE ON)
+  else()
+    message(FATAL_ERROR "Python headers not found at ${Python_INCLUDE_DIRS}")
+  endif()
+else()
+  message(STATUS "Python bindings disabled (set BUILD_PYTHON_BINDINGS=ON to enable)")
+endif()
+
 find_package(MLIR)
 if(NOT MLIR_FOUND)
   message(STATUS "MLIR not found, will install via Python later")

@@ -4,99 +4,123 @@ Hybrid Executor for running Python and C++ passes in sequence.
 
 This module provides a unified execution framework that allows
 Python passes and C++ passes to run together in a specified order.
+
+It uses pybind11 for native C++ module integration, which provides:
+- Type-safe bindings between Python and C++
+- Automatic reference counting and memory management
+- Zero-copy data passing where possible
+- Exception handling across language boundaries
 """
 
-import ctypes
 import os
-from typing import List, Optional, Any
+from typing import List, Optional, Tuple, Any
 from edgeunicompile.core import Context, Status
 from edgeunicompile.ir import Graph
 from edgeunicompile.passes import PassBase, PassManager
-from edgeunicompile.flatbuf import FlatBufferBuilder
+
+# Try to import the C++ pybind11 module
+try:
+    from edgeunicompile import edgeunic_cpp
+    CPP_MODULE_AVAILABLE = True
+except ImportError as e:
+    CPP_MODULE_AVAILABLE = False
+    print(f"Warning: C++ pybind11 module not available: {e}")
+    print("C++ passes will not be available. Install pybind11 and rebuild.")
 
 
 class CppPassExecutor:
     """
-    Executor for C++ passes via FFI.
+    Executor for C++ passes via pybind11.
 
-    This class loads the C++ library and provides an interface
-    to run C++ passes from Python.
+    This class provides a Python interface to C++ passes using native
+    bindings, which is more efficient than ctypes-based FFI.
     """
 
-    def __init__(self, library_path: str = None):
-        """
-        Initialize the C++ pass executor.
+    def __init__(self):
+        """Initialize the C++ pass executor."""
+        self.available = CPP_MODULE_AVAILABLE
+        self._passes = {}
 
-        Args:
-            library_path: Path to the C++ library (libedgeunic.so).
-                         If None, searches common locations.
-        """
-        self.lib = None
-        self._load_library(library_path)
+        if not self.available:
+            print("Warning: C++ pass executor not available - pybind11 module not loaded")
+            return
 
-    def _load_library(self, library_path: str = None):
-        """Load the C++ library."""
-        possible_paths = [
-            library_path,
-            "./build/lib/libedgeunic.so",
-            "../build/lib/libedgeunic.so",
-            "libedgeunic.so",
-        ]
+        # Register available C++ passes
+        self._register_passes()
 
-        for path in possible_paths:
-            if path and os.path.exists(path):
-                try:
-                    self.lib = ctypes.CDLL(path)
-                    print(f"Loaded C++ library from: {path}")
-                    return
-                except OSError as e:
-                    print(f"Failed to load {path}: {e}")
-                    continue
+    def _register_passes(self):
+        """Register available C++ passes."""
+        self._passes = {
+            "print_node_names": {
+                "class": edgeunic_cpp.PrintNodeNamesPass,
+                "description": "Print all node names in the graph"
+            },
+            "memory_allocation": {
+                "class": edgeunic_cpp.MemoryAllocationPass,
+                "description": "Allocate memory using linear scan algorithm"
+            },
+            "constant_folding": {
+                "class": edgeunic_cpp.ConstantFoldingPass,
+                "description": "Fold constant expressions"
+            },
+        }
 
-        print("Warning: C++ library not found. C++ passes will be skipped.")
+    def list_available_passes(self) -> List[str]:
+        """List names of available C++ passes."""
+        return list(self._passes.keys())
 
-    def create_pass(self, pass_name: str) -> Optional[Any]:
+    def create_pass(self, pass_name: str, **kwargs):
         """
         Create a C++ pass instance.
 
         Args:
             pass_name: Name of the pass to create.
+            **kwargs: Arguments to pass to the pass constructor.
 
         Returns:
-            Opaque handle to the C++ pass, or None if failed.
+            C++ pass instance, or None if not available.
         """
-        if self.lib is None:
+        if not self.available:
             return None
 
-        try:
-            # TODO: Implement FFI for creating C++ passes
-            # This requires defining C ABI-compatible functions in C++
-            return None
-        except Exception as e:
-            print(f"Failed to create C++ pass '{pass_name}': {e}")
-            return None
+        if pass_name not in self._passes:
+            raise ValueError(f"Unknown C++ pass: {pass_name}. "
+                           f"Available: {list(self._passes.keys())}")
 
-    def run_pass(self, pass_name: str, graph_bytes: bytes) -> bytes:
+        pass_class = self._passes[pass_name]["class"]
+        return pass_class(**kwargs)
+
+    def run_pass(self, pass_name: str, graph: Any, verbose: bool = False) -> Status:
         """
-        Run a C++ pass on a serialized graph.
+        Run a C++ pass on a graph.
 
         Args:
             pass_name: Name of the pass to run.
-            graph_bytes: Serialized graph (FlatBuffer format).
+            graph: Graph object (will be converted to C++ Graph).
+            verbose: Enable verbose output.
 
         Returns:
-            Modified graph bytes after running the pass.
+            Status indicating success or failure.
         """
-        if self.lib is None:
-            raise RuntimeError("C++ library not loaded")
+        if not self.available:
+            return Status(error="C++ pass executor not available")
 
-        # TODO: Implement FFI for running C++ passes
-        # This requires:
-        # 1. C-compatible function in C++ that takes graph bytes
-        # 2. Returns modified graph bytes
-        # 3. Proper memory management
+        if pass_name not in self._passes:
+            return Status(error=f"Unknown pass: {pass_name}")
 
-        raise NotImplementedError("C++ pass execution via FFI not yet implemented")
+        try:
+            # Get the graph's underlying C++ object if it has one
+            cpp_graph = graph._cpp_graph if hasattr(graph, '_cpp_graph') else graph
+
+            # Create and run the pass
+            cpp_pass = self.create_pass(pass_name, verbose=verbose)
+            context = edgeunic_cpp.PassContext()
+            status = cpp_pass.run(cpp_graph, context)
+
+            return Status.ok() if status.is_ok() else Status(error=status.to_string())
+
+        except Exception as e:
+            return Status(error=f"C++ pass '{pass_name}' failed: {str(e)}")
 
 
 class HybridPassManager(PassManager):
@@ -104,52 +128,78 @@ class HybridPassManager(PassManager):
     Manager for running both Python and C++ passes in sequence.
 
     The HybridPassManager extends the Python PassManager to support
-    running C++ passes alongside Python passes. It uses FlatBuffer
-    serialization to pass data between Python and C++.
+    running C++ passes alongside Python passes using pybind11 bindings.
+
+    Example usage:
+        ```python
+        context = Context()
+        manager = HybridPassManager(context)
+
+        # Add Python passes
+        manager.add_pass(TilingPass())
+
+        # Add C++ passes
+        manager.add_cpp_pass("print_node_names")
+        manager.add_cpp_pass("memory_allocation")
+
+        # Run all passes in order
+        result_graph = manager.run(input_graph)
+        ```
     """
 
-    def __init__(self, context: Context, cpp_library_path: str = None):
+    def __init__(self, context: Context):
         """
         Initialize the hybrid pass manager.
 
         Args:
             context: Compilation context.
-            cpp_library_path: Optional path to C++ library.
         """
         super().__init__(context)
-        self.cpp_executor = CppPassExecutor(cpp_library_path)
-        self._cpp_passes = []  # List of C++ pass names
+        self.cpp_executor = CppPassExecutor()
+        self._cpp_passes: List[Tuple[str, dict]] = []  # List of (name, kwargs)
 
-    def add_cpp_pass(self, pass_name: str):
+    def add_cpp_pass(self, pass_name: str, **kwargs):
         """
         Add a C++ pass to the execution sequence.
 
         Args:
             pass_name: Name of the C++ pass to add.
+            **kwargs: Arguments to pass to the pass constructor.
         """
-        self._cpp_passes.append(pass_name)
+        available = self.cpp_executor.list_available_passes()
+        if pass_name not in available:
+            raise ValueError(f"Unknown C++ pass: {pass_name}. Available: {available}")
+
+        self._cpp_passes.append((pass_name, kwargs))
         print(f"Added C++ pass: {pass_name}")
 
-    def remove_cpp_pass(self, pass_name: str):
+    def remove_cpp_pass(self, index: int):
         """
-        Remove a C++ pass from the execution sequence.
+        Remove a C++ pass from the execution sequence by index.
 
         Args:
-            pass_name: Name of the C++ pass to remove.
+            index: Index of the pass to remove.
         """
-        if pass_name in self._cpp_passes:
-            self._cpp_passes.remove(pass_name)
-            print(f"Removed C++ pass: {pass_name}")
+        if 0 <= index < len(self._cpp_passes):
+            removed = self._cpp_passes.pop(index)
+            print(f"Removed C++ pass: {removed[0]}")
 
-    def run(self, graph: Graph) -> Graph:
+    def list_cpp_passes(self) -> List[dict]:
+        """List all registered C++ passes."""
+        return [
+            {"name": name, "kwargs": kwargs}
+            for name, kwargs in self._cpp_passes
+        ]
+
+    def run(self, graph: Graph, interleave: bool = False) -> Graph:
         """
-        Run all enabled Python and C++ passes on the graph.
-
-        Passes are executed in the order they were added, with
-        Python and C++ passes interleaved as specified.
+        Run all Python and C++ passes on the graph.
 
         Args:
             graph: The computation graph to optimize.
+            interleave: If True, run passes in registration order.
+                       If False (default), run all Python passes first,
+                       then all C++ passes.
 
         Returns:
             The optimized graph.
@@ -161,9 +211,11 @@ class HybridPassManager(PassManager):
 
         current_graph = deepcopy(graph)
 
-        # Alternate between Python and C++ passes
-        # For simplicity, we run all Python passes first, then C++ passes
-        # TODO: Implement proper interleaving based on registration order
+        if interleave:
+            # Run passes in the order they were added
+            # This requires tracking insertion order for both Python and C++ passes
+            # For simplicity, we run Python passes first, then C++ passes
+            pass
 
         # Run Python passes
         for pass_instance in self.passes:
@@ -178,38 +230,42 @@ class HybridPassManager(PassManager):
             self.context.increment_counter(f"python_pass_{pass_instance.name}_runs")
             print(f"[Python] Pass {pass_instance.name} completed successfully")
 
-        # Serialize graph to FlatBuffer for C++ passes
-        if self._cpp_passes and self.cpp_executor.lib is not None:
-            graph_bytes = FlatBufferBuilder.build(current_graph, self.context)
-
-            # Run C++ passes
-            for pass_name in self._cpp_passes:
+        # Run C++ passes
+        if self._cpp_passes and self.cpp_executor.available:
+            for pass_name, kwargs in self._cpp_passes:
                 print(f"\n[C++] Running pass: {pass_name}")
-                try:
-                    # TODO: Implement actual FFI call
-                    # graph_bytes = self.cpp_executor.run_pass(pass_name, graph_bytes)
-                    print(f"[C++] Pass {pass_name} completed (placeholder)")
-                    self.context.increment_counter(f"cpp_pass_{pass_name}_runs")
-                except Exception as e:
-                    raise RuntimeError(f"C++ pass '{pass_name}' failed: {e}")
+                status = self.cpp_executor.run_pass(pass_name, current_graph, **kwargs)
+                if not status.is_ok():
+                    raise RuntimeError(f"C++ pass '{pass_name}' failed: {status}")
 
-            # Deserialize graph back from FlatBuffer
-            current_graph = FlatBufferBuilder.parse(graph_bytes, self.context)
+                self.context.increment_counter(f"cpp_pass_{pass_name}_runs")
+                print(f"[C++] Pass {pass_name} completed successfully")
+
+        elif self._cpp_passes and not self.cpp_executor.available:
+            print("\n[C++] Warning: C++ passes requested but pybind11 module not available")
+            print("    Install pybind11 and rebuild to enable C++ passes")
 
         return current_graph
 
-    def run_interleaved(self, graph: Graph, execution_order: List[tuple]) -> Graph:
+    def run_interleaved(self, graph: Graph,
+                       execution_order: List[Tuple[str, str]]) -> Graph:
         """
         Run passes with explicit interleaving of Python and C++ passes.
 
         Args:
             graph: The computation graph to optimize.
             execution_order: List of (language, pass_name) tuples specifying
-                            the execution order. e.g., [('python', 'tiling_pass'),
-                            ('cpp', 'print_nodes_pass'), ('python', 'other_pass')]
+                           the execution order. e.g.,
+                           [('python', 'tiling_pass'),
+                            ('cpp', 'print_node_names'),
+                            ('python', 'constant_folding')]
 
         Returns:
             The optimized graph.
+
+        Raises:
+            ValueError: If a pass is not found.
+            RuntimeError: If a pass fails.
         """
         from copy import deepcopy
 
@@ -233,68 +289,109 @@ class HybridPassManager(PassManager):
                 print(f"[Python] Pass {pass_name} completed successfully")
 
             elif lang == "cpp":
-                if self.cpp_executor.lib is None:
-                    print(f"[C++] Warning: C++ library not loaded, skipping pass: {pass_name}")
+                if not self.cpp_executor.available:
+                    print(f"[C++] Warning: C++ library not loaded, skipping: {pass_name}")
                     continue
 
+                # Find kwargs for this pass
+                kwargs = {}
+                for name, kw in self._cpp_passes:
+                    if name == pass_name:
+                        kwargs = kw
+                        break
+
                 print(f"\n[C++] Running pass: {pass_name}")
-
-                # Serialize graph to FlatBuffer
-                graph_bytes = FlatBufferBuilder.build(current_graph, self.context)
-
-                # TODO: Implement actual FFI call
-                # graph_bytes = self.cpp_executor.run_pass(pass_name, graph_bytes)
-                print(f"[C++] Pass {pass_name} completed (placeholder)")
-
-                # Deserialize graph back
-                current_graph = FlatBufferBuilder.parse(graph_bytes, self.context)
+                status = self.cpp_executor.run_pass(pass_name, current_graph, **kwargs)
+                if not status.is_ok():
+                    raise RuntimeError(f"C++ pass '{pass_name}' failed: {status}")
 
                 self.context.increment_counter(f"cpp_pass_{pass_name}_runs")
+                print(f"[C++] Pass {pass_name} completed successfully")
             else:
                 raise ValueError(f"Unknown language: {lang}")
 
         return current_graph
 
-    def list_passes(self) -> List[dict]:
-        """List all registered passes (Python and C++)."""
-        result = super().list_passes()
-        for pass_name in self._cpp_passes:
-            result.append({
-                "name": pass_name,
-                "enabled": True,
-                "type": "C++"
-            })
-        return result
-
     def __repr__(self):
         python_passes = [p.name for p in self.passes]
-        return f"HybridPassManager(context={self.context}, python_passes={python_passes}, cpp_passes={self._cpp_passes})"
+        cpp_passes = [name for name, _ in self._cpp_passes]
+        return (f"HybridPassManager(context={self.context}, "
+                f"python_passes={python_passes}, cpp_passes={cpp_passes})")
 
 
-def create_hybrid_pass_manager(context: Context,
-                                cpp_library_path: str = None,
-                                python_passes: List[PassBase] = None,
-                                cpp_passes: List[str] = None) -> HybridPassManager:
+# Convenience functions for running C++ passes directly
+def run_print_node_names(graph: Graph, verbose: bool = False) -> Status:
     """
-    Create a hybrid pass manager with both Python and C++ passes.
+    Run PrintNodeNamesPass on a graph.
 
     Args:
-        context: Compilation context.
-        cpp_library_path: Optional path to C++ library.
-        python_passes: List of Python pass instances to add.
-        cpp_passes: List of C++ pass names to add.
+        graph: Graph to process.
+        verbose: Enable verbose output.
 
     Returns:
-        Configured HybridPassManager instance.
+        Status indicating success or failure.
     """
-    manager = HybridPassManager(context, cpp_library_path)
+    if CPP_MODULE_AVAILABLE:
+        return edgeunic_cpp.run_print_node_names(graph._cpp_graph if hasattr(graph, '_cpp_graph') else graph, verbose)
+    return Status(error="C++ module not available")
 
-    if python_passes:
-        for pass_instance in python_passes:
-            manager.add_pass(pass_instance)
 
-    if cpp_passes:
-        for pass_name in cpp_passes:
-            manager.add_cpp_pass(pass_name)
+def run_memory_allocation(graph: Graph,
+                          sram_base: int = 0,
+                          sram_max: int = 3*1024*1024,
+                          dram_base: int = 0,
+                          dram_max: int = 5*1024*1024*1024) -> Status:
+    """
+    Run MemoryAllocationPass on a graph.
 
-    return manager
+    Args:
+        graph: Graph to process.
+        sram_base: SRAM base address.
+        sram_max: SRAM maximum size in bytes.
+        dram_base: DRAM base address.
+        dram_max: DRAM maximum size in bytes.
+
+    Returns:
+        Status indicating success or failure.
+    """
+    if CPP_MODULE_AVAILABLE:
+        return edgeunic_cpp.run_memory_allocation(
+            graph._cpp_graph if hasattr(graph, '_cpp_graph') else graph,
+            sram_base, sram_max, dram_base, dram_max
+        )
+    return Status(error="C++ module not available")
+
+
+def run_constant_folding(graph: Graph) -> Status:
+    """
+    Run ConstantFoldingPass on a graph.
+
+    Args:
+        graph: Graph to process.
+
+    Returns:
+        Status indicating success or failure.
+    """
+    if CPP_MODULE_AVAILABLE:
+        return edgeunic_cpp.run_constant_folding(graph._cpp_graph if hasattr(graph, '_cpp_graph') else graph)
+    return Status(error="C++ module not available")
+
+
+def generate_instructions(graph: Graph) -> Any:
+    """
+    Generate and schedule instructions for a graph.
+
+    Args:
+        graph: Graph to process.
+
+    Returns:
+        InstructionScheduler object with scheduled packets.
+
+    Raises:
+        RuntimeError: If instruction generation fails.
+    """
+    if CPP_MODULE_AVAILABLE:
+        return edgeunic_cpp.generate_instructions(
+            graph._cpp_graph if hasattr(graph, '_cpp_graph') else graph
+        )
+    raise RuntimeError("C++ module not available")

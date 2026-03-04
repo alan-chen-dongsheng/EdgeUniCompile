@@ -109,3 +109,17 @@ set_target_properties(edgeunic PROPERTIES
          ${CMAKE_SOURCE_DIR}/include/edgeunicompile/codegen/instruction.h;\
          ${CMAKE_SOURCE_DIR}/include/edgeunicompile/codegen/instruction_scheduler.h"
 )
+
+# Pybind11 Python module (optional, requires Python)
+if(PYTHON_BINDINGS_AVAILABLE AND TARGET pybind11::module)
+    pybind11_add_module(edgeunic_cpp MODULE
+        ffi/pybind_edgeunic.cpp
+    )
+    target_link_libraries(edgeunic_cpp PRIVATE edgeunic pybind11::module)
+    set_target_properties(edgeunic_cpp PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python/edgeunicompile
+    )
+    message(STATUS "Building pybind11 Python module: edgeunic_cpp")
+else()
+    message(STATUS "Python not found, skipping pybind11 module (edgeunic_cpp)")
+endif()
