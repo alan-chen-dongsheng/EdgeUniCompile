@@ -140,6 +140,8 @@ std::string OpTypeToString(OpType type) {
             return "Reshape";
         case OpType::kTranspose:
             return "Transpose";
+        case OpType::kEltwise:
+            return "Eltwise";
         default:
             return "Unknown";
     }
@@ -174,6 +176,8 @@ OpType StringToOpType(const std::string& str) {
         return OpType::kReshape;
     } else if (str == "Transpose" || str == "transpose") {
         return OpType::kTranspose;
+    } else if (str == "Eltwise" || str == "eltwise") {
+        return OpType::kEltwise;
     }
     return OpType::kUnknown;
 }

@@ -70,6 +70,7 @@ enum class OpType {
     kMatMul,
     kReshape,
     kTranspose,
+    kEltwise,  // Element-wise operations
 };
 
 // Get string representation of operator type

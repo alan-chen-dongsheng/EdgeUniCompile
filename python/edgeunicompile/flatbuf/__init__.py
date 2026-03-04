@@ -84,6 +84,7 @@ OP_TYPE_TO_FB = {
     "HardSigmoid": 28,
     "DepthwiseConv2D": 30,
     "ConvTranspose2D": 31,
+    "Eltwise": 75,  # Element-wise operations
 }
 
 FB_TO_OP_TYPE = {v: k for k, v in OP_TYPE_TO_FB.items()}

@@ -110,6 +110,7 @@ enum OpType : ubyte {
     QLinearMatMul = 72,
     MatMulInteger = 73,
     ConvInteger = 74,
+    Eltwise = 75,  // Element-wise operations (Abs, Neg, Ceil, Floor, Log, Exp, Sqrt, etc.)
 }
 
 // Memory location for tensor storage

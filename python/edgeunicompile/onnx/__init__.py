@@ -170,7 +170,7 @@ class ONNXConverter:
                 node.add_output(tensor_map[output_name])
 
         # Convert attributes
-        node = ONNXConverter._convert_attributes(node, node_proto.attribute)
+        node = ONNXConverter._convert_attributes(node, node_proto.attribute, op_type)
 
         return node
 
@@ -230,26 +230,52 @@ class ONNXConverter:
             "Softmax": "Softmax",
             "MatMul": "MatMul",
             "Reshape": "Reshape",
-            "Transpose": "Transpose"
+            "Transpose": "Transpose",
+            # Eltwise operations (element-wise)
+            "Eltwise": "Eltwise",
+            "Abs": "Eltwise",
+            "Neg": "Eltwise",
+            "Ceil": "Eltwise",
+            "Floor": "Eltwise",
+            "Round": "Eltwise",
+            "Exp": "Eltwise",
+            "Log": "Eltwise",
+            "Sqrt": "Eltwise",
+            "Reciprocal": "Eltwise",
         }
 
         return op_map.get(onnx_op_type, "Unknown")
 
     @staticmethod
-    def _convert_attributes(node: Node, onnx_attributes: list) -> Node:
+    def _convert_attributes(node: Node, onnx_attributes: list, op_type: str = None) -> Node:
         """
         Convert ONNX attributes to EdgeUniCompile node attributes.
 
         Args:
             node: EdgeUniCompile Node.
             onnx_attributes: List of ONNX AttributeProto.
+            op_type: The converted operation type (optional).
 
         Returns:
             Updated EdgeUniCompile Node.
         """
         for attr in onnx_attributes:
             value = ONNXConverter._convert_attribute_value(attr)
-            node.set_attribute(attr.name, value)
+
+            # Handle Eltwise-specific attributes
+            if op_type == "Eltwise":
+                # Map ONNX operator type to Eltwise mode
+                mode = attr.name
+                if mode in ["type", "mode"]:
+                    # Eltwise mode: product, sum, max, etc.
+                    node.set_attribute("eltwise_mode", value)
+                elif mode == "alpha":
+                    # Coefficient for the operation
+                    node.set_attribute("alpha", value)
+                else:
+                    node.set_attribute(attr.name, value)
+            else:
+                node.set_attribute(attr.name, value)
         return node
 
     @staticmethod

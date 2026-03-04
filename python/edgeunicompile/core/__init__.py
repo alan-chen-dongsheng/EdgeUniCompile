@@ -36,6 +36,7 @@ class OpType(Enum):
     MATMUL = "MatMul"
     RESHAPE = "Reshape"
     TRANSPOSE = "Transpose"
+    ELTWISE = "Eltwise"
 
 
 class StatusCode(Enum):
