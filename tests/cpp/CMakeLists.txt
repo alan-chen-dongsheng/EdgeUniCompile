@@ -2,12 +2,6 @@
 
 include(CTest)
 
-# Use manually built GTest
-set(GTEST_INCLUDE_DIR "/tmp/googletest/install/include")
-set(GTEST_LIBRARY "/tmp/googletest/install/lib/libgtest.a")
-set(GTEST_MAIN_LIBRARY "/tmp/googletest/install/lib/libgtest_main.a")
-include_directories(${GTEST_INCLUDE_DIR})
-
 # Add test executable
 add_executable(euc_test
     core/context_test.cpp
@@ -21,12 +15,8 @@ add_executable(euc_test
 
 # Link libraries
 target_link_libraries(euc_test PRIVATE
-    /tmp/googletest/install/lib/libgtest.a
-    /tmp/googletest/install/lib/libgtest_main.a
-    /tmp/googletest/install/lib/libgmock.a
+    GTest::gtest GTest::gtest_main
     edgeunic
-    /tmp/flatbuffers/install/lib/libflatbuffers.a
-    pthread
 )
 
 # Include directories

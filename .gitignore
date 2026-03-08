@@ -39,8 +39,10 @@ Thumbs.db
 *.temp
 *.swp
 
-# Third party
-third_party/
+# Third party (submodules are explicitly tracked)
+!third_party/flatbuffers/
+!third_party/pybind11/
+!third_party/googletest/
 
 # MLIR
 mlir_build/
