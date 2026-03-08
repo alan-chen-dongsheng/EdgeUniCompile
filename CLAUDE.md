@@ -17,6 +17,7 @@ A comprehensive compiler framework designed specifically for edge AI devices. It
 ## rules
 
 1. make sure you can build the project success if you do code changes.
+2. For all CMake projects, use git submodules as the default package management method. Do not use FetchContent.
 
 ## Project Architecture
 
@@ -158,9 +159,15 @@ flatc -p --gen-mutable include/edgeunicompile/flatbuf/edgeunicompile.fbs
 
 ### C++
 
-- **FlatBuffers:** Automatic download if not found (v24.3.25)
+- **FlatBuffers:** Git submodule (v24.3.25) in `third_party/flatbuffers`
 - **MLIR:** Optional (will be installed via Python if needed)
-- **GTest:** For testing (downloaded if not found)
+- **GTest:** Git submodule (v1.15.0) in `third_party/googletest`
+- **pybind11:** Git submodule (v2.11.1) in `third_party/pybind11` (optional)
+
+**Initialize submodules:**
+```bash
+git submodule update --init --recursive
+```
 
 ### Python
 
