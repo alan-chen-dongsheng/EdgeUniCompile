@@ -225,7 +225,7 @@ class TilingPass(PassBase):
 
                 pad_top, pad_bottom, pad_left, pad_right = pads[0], pads[1], pads[2], pads[3]
                 kernel_h, kernel_w = kernel_shape[0], kernel_shape[1]
-                stride_y, stride_x = strides[1], strides[0]
+                stride_y, stride_x = strides[0], strides[1]
 
                 # Effective kernel offset (how much the kernel extends before the output pixel)
                 kernel_offset_y = (kernel_h - 1) // 2
@@ -400,7 +400,7 @@ class TilingPass(PassBase):
             # For edge tiles, we might need different padding
             # This is handled at runtime based on slice position
             tile_node.set_attribute("kernel_shape", kernel_shape)
-            tile_node.set_attribute("strides", [1, 1])  # Stride is 1 since we already sliced
+            tile_node.set_attribute("strides", strides)  # Preserve original strides; slice already extracts the correct input region
             tile_node.set_attribute("pads", [0, 0, 0, 0])  # No padding needed after slice
             tile_node.set_attribute("dilations", dilations)
             tile_node.set_attribute("groups", groups)
