@@ -251,6 +251,8 @@ class Graph:
         Returns:
             List of nodes in topological order
         """
+        from collections import deque
+
         # Build adjacency list and in-degree count
         adj = {}
         in_degree = {}
@@ -267,11 +269,11 @@ class Graph:
                         in_degree[other_node.name] += 1
 
         # Kahn's algorithm for topological sort
-        queue = [name for name, degree in in_degree.items() if degree == 0]
+        queue = deque(name for name, degree in in_degree.items() if degree == 0)
         topological = []
 
         while queue:
-            u = queue.pop(0)
+            u = queue.popleft()
             topological.append(self._node_map[u])
 
             for v in adj[u]:

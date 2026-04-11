@@ -44,7 +44,10 @@ Status InstructionScheduler::GenerateInstructions(const GraphPtr& graph, std::sh
     for (const auto& node_name : node_order_) {
         auto node = graph->GetNode(node_name);
         if (node) {
-            GenerateNodeInstructions(node, graph);
+            auto status = GenerateNodeInstructions(node, graph);
+            if (!status.IsOk()) {
+                return status;
+            }
         }
     }
 
@@ -98,7 +101,7 @@ void InstructionScheduler::TopologicalSortDFS(const GraphPtr& graph) {
     node_order_ = std::move(result);
 }
 
-void InstructionScheduler::GenerateNodeInstructions(const NodePtr& node, const GraphPtr& graph) {
+Status InstructionScheduler::GenerateNodeInstructions(const NodePtr& node, const GraphPtr& graph) {
     int node_id = node_id_map_[node->GetName()];
 
     // Generate LOAD instructions for all inputs
@@ -120,6 +123,14 @@ void InstructionScheduler::GenerateNodeInstructions(const NodePtr& node, const G
             dram_addresses_[input_tensor->GetName()] = 0;  // Would need proper allocation
         }
         load_instr->SetSourceDramAddress(dram_addresses_[input_tensor->GetName()]);
+
+        // Check SRAM bounds before allocating
+        if (next_sram_address_ + size_bytes > SRAM_BASE + SRAM_MAX_SIZE) {
+            return Status::ResourceExhausted(
+                "SRAM exhausted when loading tensor '" + input_tensor->GetName() +
+                "': needed " + std::to_string(size_bytes) + " bytes but only " +
+                std::to_string(SRAM_BASE + SRAM_MAX_SIZE - next_sram_address_) + " bytes available");
+        }
 
         // Allocate SRAM address
         sram_addresses_[input_tensor->GetName()] = next_sram_address_;
@@ -147,6 +158,15 @@ void InstructionScheduler::GenerateNodeInstructions(const NodePtr& node, const G
     // Allocate output SRAM address
     for (const auto& output_tensor : node->GetOutputs()) {
         size_t size_bytes = output_tensor->GetShape().NumElements() * 4;
+
+        // Check SRAM bounds before allocating output
+        if (next_sram_address_ + size_bytes > SRAM_BASE + SRAM_MAX_SIZE) {
+            return Status::ResourceExhausted(
+                "SRAM exhausted when allocating output tensor '" + output_tensor->GetName() +
+                "': needed " + std::to_string(size_bytes) + " bytes but only " +
+                std::to_string(SRAM_BASE + SRAM_MAX_SIZE - next_sram_address_) + " bytes available");
+        }
+
         sram_addresses_[output_tensor->GetName()] = next_sram_address_;
         exec_instr->SetOutputSramAddress(next_sram_address_);
         next_sram_address_ += size_bytes;
@@ -183,6 +203,8 @@ void InstructionScheduler::GenerateNodeInstructions(const NodePtr& node, const G
 
         instructions_.push_back(store_instr);
     }
+
+    return Status::Ok();
 }
 
 void InstructionScheduler::BuildInstructionDependencies() {

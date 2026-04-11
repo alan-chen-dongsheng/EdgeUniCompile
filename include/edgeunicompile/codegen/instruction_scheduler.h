@@ -81,8 +81,9 @@ private:
      *
      * @param node The node to generate instructions for.
      * @param graph The computation graph.
+     * @return Status indicating success or failure.
      */
-    void GenerateNodeInstructions(const NodePtr& node, const GraphPtr& graph);
+    Status GenerateNodeInstructions(const NodePtr& node, const GraphPtr& graph);
 
     /**
      * Build dependency graph between instructions.

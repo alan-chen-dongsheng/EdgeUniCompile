@@ -12,11 +12,14 @@ It uses pybind11 for native C++ module integration, which provides:
 - Exception handling across language boundaries
 """
 
+import logging
 import os
 from typing import List, Optional, Tuple, Any
 from edgeunicompile.core import Context, Status
 from edgeunicompile.ir import Graph
 from edgeunicompile.passes import PassBase, PassManager
+
+logger = logging.getLogger(__name__)
 
 # Try to import the C++ pybind11 module
 try:
@@ -24,8 +27,8 @@ try:
     CPP_MODULE_AVAILABLE = True
 except ImportError as e:
     CPP_MODULE_AVAILABLE = False
-    print(f"Warning: C++ pybind11 module not available: {e}")
-    print("C++ passes will not be available. Install pybind11 and rebuild.")
+    logger.warning("C++ pybind11 module not available: %s", e)
+    logger.warning("C++ passes will not be available. Install pybind11 and rebuild.")
 
 
 class CppPassExecutor:
@@ -42,7 +45,7 @@ class CppPassExecutor:
         self._passes = {}
 
         if not self.available:
-            print("Warning: C++ pass executor not available - pybind11 module not loaded")
+            logger.warning("C++ pass executor not available - pybind11 module not loaded")
             return
 
         # Register available C++ passes
